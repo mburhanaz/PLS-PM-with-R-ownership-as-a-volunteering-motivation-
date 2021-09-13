@@ -1,0 +1,129 @@
+---
+title: "PLS-PM Modelling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Measuring Psychological Ownership as Motivation for Voluntary Activities of Mapagama Members
+
+Mapagama as a voluntary organization is a type of organization that depends on the willingness of it's members to engage in activities. This is due to the absence of external factors such as binding contracts or material compensation that can be an attraction to continue activities in it. Therefore, this type of organization is prone to loss of members to carry out activities if they lose internal factors within themselves to continue running the organization.
+
+Several questions have been given to members of mapagama through an online form. All of them are measuring psychological ownership, attitude toward volunteering, volunteering intention, and time pressure.
+
+## Import Data
+
+```{r import data}
+library(readxl)
+voluntary = read_excel("C:/PLS PM (Members of Mapagama).xlsx")
+```
+
+## Preparation Model
+
+We should manually install this package since this package was removed from the CRAN repository. It can be found in the archive.
+```{r building inner model}
+library(plspm)
+
+#rows of the path matrix
+Ownership = c(0,0,0,0)
+Attitude = c(1,0,0,0)
+TimePressure = c(0,0,0,0)
+Intention = c(1,1,1,0)
+
+#create matrix with binding rows
+vol_path = rbind(Ownership,Attitude,TimePressure,Intention)
+colnames(vol_path)=rownames(vol_path)
+vol_path
+innerplot(vol_path)
+
+```
+
+vol_path matrix has an entry 0 and 1 which represent the correlations among all latent variables. Row indicated endogenous variable and column indicated exogenous variable.
+
+```{r adding the indicators of latent variable}
+#add the indicators of latent variable
+vol_ind = list(1:6,7:10,14:15,11:13)
+
+#all latent variabels are measured in a reflective way
+vol_modes = c("A","A","A","A")
+```
+```{r plspm analysis, warning=FALSE}
+
+#run plspm analysis
+vol_pls=plspm(voluntary,vol_path,vol_ind,modes=vol_modes,boot.val = TRUE,br=200)
+```
+
+## Measurement Model Assessment
+
+Unidimensionality
+```{r uni}
+vol_pls$unidim
+```
+
+Value Cochran alpha is greater than 0.7 indicated that the indicator is a good enough to represent a latent variable. The table above shows that indicators from latent ownership and time pressure are not good enough to represent the corresponding latent. But let's assume that every latent are well represented by each indicator (valid) because they all have a value of  Cochran alpha greater than 5.
+
+Reliability
+```{r reliable}
+vol_pls$outer_model
+```
+
+The loading value of each indicator is greater than 0.7 and the communality value is above 0.5, meaning that each indicator has a good relationship and reliability to measure its respective variables. Indicator variable with loading value less than 0.5 will be removed.
+
+So, let's rebuild the model.
+
+## Rebuilding The Model
+
+```{r adding new indicators of latent variable}
+#add the indicators of latent variable
+vol_ind_n = list(c(1,4,6),7:10,14:15,11:13)
+
+#all latent variabels are measured in a reflective way
+vol_modes_n = c("A","A","A","A")
+```
+```{r  new plspm analysis,warning=FALSE}
+
+#run plspm analysis
+vol_pls_n=plspm(voluntary,vol_path,vol_ind_n,modes=vol_modes_n,boot.val = TRUE,br=200)
+```
+## Measurement Model Assessment Part 2
+
+Unidimensionality
+```{r uni new}
+vol_pls_n$unidim
+```
+
+Value Cochran alpha is greater than 0.7 indicated that the indicator is a good enough to represent a latent variable. The table above shows that indicators from latent ownership and time pressure are not good enough to represent the corresponding latent. But let's assume that every latent are well represented by each indicator (valid) because they all have a value of  Cochran alpha greater than 5.
+
+Reliability
+```{r reliable new}
+vol_pls_n$outer_model
+```
+
+The loading value of each indicator is greater than 0.7 and the communality value is above 0.5, meaning that each indicator has a good relationship and reliability to measure its respective variables. So far, we assume that all indicators are valid and reliable even though they do not match the criteria
+
+## Structural Model Assessment
+
+Regression equation
+```{r regression}
+vol_pls_n$inner_model
+```
+
+Goodness-of-Fit
+```{r GOF}
+vol_pls_n$gof
+```
+
+From the regression table, we can conclude that :
+
+1. The higher psychological ownership, the better attitude toward volunteering (statistically significant)
+
+2. The higher psychological ownership, the better of intention volunteering (not statistically significant)
+
+3. The better attitude toward volunteering, the better of intention volunteering (statistically significant)
+
+4. The higher time pressure, the worse of intention volunteering (not statistically significant)
+
+Also, value goodness of fit indicates that the model we have is not good enough.
+
